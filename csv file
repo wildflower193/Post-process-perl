@@ -1,0 +1,67 @@
+#!/usr/bin/perl
+
+die "Usage: $0 <user> <date>" if scalar @ARGV != 2;        #check correct status
+my ($user,$date) = @ARGV;
+
+system "scp $user\@sjyli0017.sc.intel.com:/nfs/site/disks/fm8_sdmdv_2/users/psgsdmcentral/sdm_regression/regress_dev_$date/results.html  .";
+
+$file = "./results.html";
+$outfile = "./$date.out";
+
+open(my $rf, '<',$file) or die"Cannot open file '$file' for read:", $!;
+open(my $of, '>',$outfile);
+
+$fail=0;
+$count=0;
+
+while( my $line= <$rf>){
+		@pg_owned=("<td>jtag\/","<td>cnoc_if\/","<td>ecc_ram\/","<td>gpio\/","<td>i2c\/","<td>qspi\/","<td>keyvault\/","<td>nsp\/","<td>pinmux\/","<td>onchip_ram\/","<td>onchip_rom\/","<td>sdm_bridges\/","<td>sdm_mailbox\/","<td>sdm_noc\/","<td>uart\/");
+	#	@pg_owned=("<td>jtag\/(.+)<\/td><td><font","<td>cnoc_if\/(.+)<\/td><td><font","<td>ecc_ram\/(.+)<\/td><td><font","<td>gpio\/(.+)<\/td><td><font","<td>i2c\/(.+)<\/td><td><font","<td>qspi\/(.+)<\/td><td><font","<td>keyvault\/(.+)<\/td><td><font","<td>nsp\/(.+)<\/td><td><font","<td>pinmux\/(.+)<\/td><td><font","<td>onchip_ram\/(.+)<\/td><td><font","<td>onchip_rom\/(.+)<\/td><td><font","<td>sdm_bridges\/(.+)<\/td><td><font","<td>sdm_mailbox\/(.+)<\/td><td><font","<td>sdm_noc\/(.+)<\/td><td><font","<td>uart\/(.+)<\/td><td><font");
+		$blk=$_;
+	
+$blk2=("<tr><td>atpg</td><td>(.+)<\/td><td><font");
+$blk3=("<tr><td>sdm</td><td>(.+)<\/td><td><font");
+                
+
+
+
+	foreach my $blk(@pg_owned){
+		if($line=~m/>PASS</){
+			if($line=~m/$blk/){
+			$pcount++;
+			push(@pcounts,$pcount);
+			}
+		}
+        #	foreach my $blk2(@pg_owned2){
+		 if (($line=~m/RUN_TIMEOUT/)or($line=~m/FAIL/)){				
+			if ($line=~m/$blk/){
+				if(($line=~m/$blk2/)or ($line=~m/$blk3/)){
+				$fcount++;
+				push(@fcounts,$fcount);
+				$count++;
+				push(@array,$count);
+				$name=$1;
+
+				push(@list,$name);
+				}
+				
+			}	
+		}
+	}
+}
+foreach(@list){
+print $of "Test name= $_\n";}
+my $size=scalar(@array);
+print $of "FAIL and RUN_TIMEOUT Test total : $size\n\n";
+
+my $tcount=scalar(@pcounts);
+print $of "Total Pass : $tcount\n";
+
+my $tcount2=scalar(@fcounts);
+print $of "Total Fail : $tcount2\n";
+
+$total=$tcount2 + $tcount;
+print $of "Total Test : $total\n";
+
+$prate= $tcount/$total*100;
+print $of "Pass Rate in PG = $prate%\n";
